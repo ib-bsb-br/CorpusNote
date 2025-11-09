@@ -18,12 +18,14 @@ import { ThemeToggle } from '../../ui/ThemeToggle'
 import { FilesContextMenu } from '../../ui/FilesContextMenu'
 
 const FileSidebar: React.FC<FileSidebarProps> = ({
+    currentOpenedFile,
     selectedFile,
     activeOption,
     setActiveOption,
     isCollapsed = false,
     onToggleCollapse,
-    handleOpenFile
+    handleOpenFile,
+    handleCompareNotes
 }) => {
     const { vaultTree: files, expandedDirectories, handleDirectoryToggle } = useFileSystem()
     const [loading, setLoading] = useState<boolean>(false)
@@ -41,6 +43,8 @@ const FileSidebar: React.FC<FileSidebarProps> = ({
             <div key={item.absPath}>
                 <FilesContextMenu
                     item={item}
+                    handleCompareNotes={handleCompareNotes}
+                    currentOpenedFile={currentOpenedFile}
                 >
                     <Button
                         variant={isSelected ? "item_generic_active" : "item_generic"}
@@ -80,7 +84,7 @@ const FileSidebar: React.FC<FileSidebarProps> = ({
 
     if (!files) {
         return (
-            <div className="w-64 border-r border-border p-4 flex items-center justify-center">
+            <div className="w-64 p-4 flex items-center justify-center">
                 <div className="text-center text-muted-foreground">
                     <Folder size={48} className="mx-auto mb-2 opacity-50" />
                     <p className="text-sm">There are no files in this vault</p>
@@ -90,7 +94,7 @@ const FileSidebar: React.FC<FileSidebarProps> = ({
     }
 
     return (
-        <div className="flex flex-col h-full border-r border-border">
+        <div className="flex flex-col h-full ">
             {/* Header */}
             <FileSidebarHeader onToggleCollapse={onToggleCollapse} isCollapsed={isCollapsed} />
       

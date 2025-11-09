@@ -24,6 +24,7 @@ import EmptyPage from './Misc/EmptyPage';
 import { EditorManagerRef } from './EditorManager/EditorManager';
 import { FileItem } from './FileSidebar/utils';
 import { EditorProvider, useEditor } from '../../contexts/EditorContext';
+import CompareNotesView from './CompareNotesView/CompareNotesView';
 
 // Prevent the editor manager from being loaded immediately on the server side
 const EditorManager = dynamic(() => import('./EditorManager/EditorManager'), {
@@ -31,26 +32,29 @@ const EditorManager = dynamic(() => import('./EditorManager/EditorManager'), {
 });
 
 const MainLayout: React.FC = () => {
+    const [filesToCompare, setFilesToCompare] = useState<[FileItem, FileItem] | null>(null);
     const [activeOption, setActiveOption] = useState<IconSidebarOptions>('files');
     const [isSidebarCollapsed, setIsSidebarCollapsed] = useState<boolean>(false);
-    const [isSemanticSearchOpen, setIsSemanticSearchOpen] = useState<boolean>(false);
+    const [activeView, setActiveView] = useState<string>('default');
 
     const { currentOpenedFile, loadFileIntoEditor, saveFile, getFileItemFromPath } = useFileSystem();
     const { registerOpenFileHandler } = useEditor();
 
     const editorManagerRef = useRef<EditorManagerRef>(null);
 
+    const handleCompareNotes = (otherFile: FileItem) => {
+        if (!currentOpenedFile) return
+        setFilesToCompare([currentOpenedFile, otherFile])
+        setActiveView('compareNotes')
+    }
+
     const handleOpenFile = useCallback(async (newFileToOpen: FileItem | string) => {
         let fileToOpen: FileItem | string = null;
-        if (typeof newFileToOpen === 'string') {
-            fileToOpen = getFileItemFromPath(newFileToOpen)
-        } else {
-            fileToOpen = newFileToOpen
-        }
-        console.log(`[OPEN FILE] File to open: ${fileToOpen}`)
+        fileToOpen = typeof newFileToOpen === 'string'
+            ? getFileItemFromPath(newFileToOpen)
+            : newFileToOpen
+
         if (!fileToOpen) return
-        console.log(`[OPEN FILE] Handling open file: ${fileToOpen.absPath}`)
-        console.log(`[OPEN FILE] Current opened file: ${fileToOpen?.absPath}`)
         if (currentOpenedFile?.absPath === fileToOpen.absPath) return
 
         const fileToSave = currentOpenedFile
@@ -63,7 +67,6 @@ const MainLayout: React.FC = () => {
         await loadFileIntoEditor(fileToOpen)
 
         if (fileToSave && contentToSave) {
-            console.log(`[OPEN FILE] Saving file: ${fileToSave.absPath}`)
             const markdown = await editorManagerRef.current?.getMarkdownContent()
             await saveFile(fileToSave, contentToSave, markdown)
         }
@@ -85,8 +88,26 @@ const MainLayout: React.FC = () => {
         }
     };
 
+    const viewMap = {
+        semanticSearch: (
+            <SemanticSidebar
+                onClose={() => setActiveView('default')}
+                handleOpenFile={handleOpenFile}
+            />
+        ),
+        compareNotes: (
+            <CompareNotesView
+                files={filesToCompare}
+                onClose={() => {
+                    setFilesToCompare(null)
+                    setActiveView('default')
+                }}
+            />
+        ),
+        default: (<></>)
+    }
+
     useEffect(() => {
-        console.log(`[MAIN LAYOUT] Registering open file handler`)
         registerOpenFileHandler(handleOpenFile)
 
         return () => {
@@ -108,12 +129,14 @@ const MainLayout: React.FC = () => {
                 onExpand={() => setIsSidebarCollapsed(false)}
             >
                 <FileSidebar
+                    currentOpenedFile={currentOpenedFile}
                     selectedFile={currentOpenedFile}
                     activeOption={activeOption}
                     setActiveOption={setActiveOption}
                     isCollapsed={isSidebarCollapsed}
                     onToggleCollapse={handleToggleFileSidebar} // Use the new handler
                     handleOpenFile={handleOpenFile}
+                    handleCompareNotes={handleCompareNotes}
                 />
             </ResizablePanel>
 
@@ -128,7 +151,9 @@ const MainLayout: React.FC = () => {
                                 selectedFile={currentOpenedFile}
                                 isSidebarCollapsed={isSidebarCollapsed}
                                 onToggleSidebar={handleToggleFileSidebar} // Use the new handler
-                                onToggleSemanticSearch={() => setIsSemanticSearchOpen(!isSemanticSearchOpen)}
+                                onToggleSemanticSearch={() => {
+                                    setActiveView(activeView === 'semanticSearch' ? 'default' : 'semanticSearch')
+                                }}
                             />
                             <EditorManager onOpenFile={handleOpenFile} ref={editorManagerRef} />
                         </div>
@@ -141,18 +166,18 @@ const MainLayout: React.FC = () => {
             </ResizablePanel>
 
             {/* Right Sidebar - Semantic Search (conditionally rendered) */}
-            {isSemanticSearchOpen && (
+            {activeView !== 'default' && (
                 <>
                     <ResizableHandle withHandle />
                     <ResizablePanel
                         collapsible={true}
                         collapsedSize={0}
                         minSize={15}
-                        maxSize={30} // Capped at 30% of the window width
-                        defaultSize={20}
-                        onCollapse={() => setIsSemanticSearchOpen(false)}
+                        maxSize={40} // Capped at 30% of the window width
+                        defaultSize={35}
+                        onCollapse={() => setActiveView('default')}
                     >
-                        <SemanticSidebar onClose={() => setIsSemanticSearchOpen(false)} handleOpenFile={handleOpenFile} />
+                        {viewMap[activeView]}
                     </ResizablePanel>
                 </>
             )}
