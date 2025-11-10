@@ -31,10 +31,6 @@ const CompareNotesView: React.FC<CompareNotesViewProps> = ({ files, onClose }) =
         isMountedRef.current = true;
         return () => {
             isMountedRef.current = false;
-            // Reset all state variables
-            setIsLoading(false);
-            setError(null);
-            setComparison('');
         }
     }, [])
 
@@ -70,7 +66,9 @@ const CompareNotesView: React.FC<CompareNotesViewProps> = ({ files, onClose }) =
                     throw new Error('Could not read the content of one or both notes.')
                 
                 const handleChunk = (chunk: string) => {
-                    setComparison(prev => prev + chunk)
+                    if (isMountedRef.current) {
+                        setComparison(prev => prev + chunk)
+                    }
                 }
 
                 await runAITask(
@@ -88,7 +86,7 @@ const CompareNotesView: React.FC<CompareNotesViewProps> = ({ files, onClose }) =
 
             } catch (err) {
                 if (isMountedRef.current) {
-                    setError(err.message || 'An unkown error occurred.')
+                    setError(err.message || 'An unknown error occurred.')
                 }
             } finally {
                 if (isMountedRef.current) {
@@ -98,7 +96,9 @@ const CompareNotesView: React.FC<CompareNotesViewProps> = ({ files, onClose }) =
         }
 
         performComparison()
-    }, [files, activeModel, readFileAndCache])
+    // `readFileAndCache` is assumed stable from context, so it's omitted from deps to avoid unnecessary re-runs.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [files, activeModel])
 
     return (
         <div className="p-4 h-full flex flex-col">

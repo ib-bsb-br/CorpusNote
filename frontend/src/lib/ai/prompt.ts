@@ -6,7 +6,7 @@ export const compareNotesPrompt = {
     prompt: (data: { noteAContent: string, noteBContent: string, fileA: FileItem, fileB: FileItem }) => `
         You are an intelligent note-taking assistant. Your task is to compare two notes and provide a synthesis.
 
-        Amswer Start: - Begin your answer with a few sentences that provide a summary of the overall comparison.
+        Answer Start: - Begin your answer with a few sentences that provide a summary of the overall comparison.
 
         Here is an example of a good comparison:
 
