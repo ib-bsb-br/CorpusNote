@@ -24,12 +24,17 @@ pub async fn ollama_generate_stream(
 ) -> Result<(), String> {
     let ollama = Ollama::default();
 
-    let mut stream = ollama.generate_stream(GenerationRequest::new(model, prompt)).await.unwrap();
+    let mut stream = ollama
+        .generate_stream(GenerationRequest::new(model, prompt))
+        .await
+        .map_err(|e| format!("Failed to start stream: {}", e))?;
 
     while let Some(res) = stream.next().await {
-        let responses = res.unwrap();
+        let responses = res.map_err(|e| format!("Stream error: {}", e))?;
         for resp in responses {
-            window.emit(&onchunk, resp.response).unwrap();
+            window
+                .emit(&onchunk, resp.response)
+                .map_err(|e| format!("Failed to emit event: {}", e))?;
         }
     }
 

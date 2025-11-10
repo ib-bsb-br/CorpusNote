@@ -171,7 +171,10 @@ const FileCacheProvider: React.FC<{ children: React.ReactNode }> = ({ children }
       staleTime: 1000 * 60 * 5,
       gcTime: 1000 * 60 * 10,
     })
-    return fileContent as string
+    if (typeof fileContent !== 'string') {
+      throw new Error(`Expected file content to be a string, but got ${typeof fileContent}`)
+    }
+    return fileContent
   }
 
   const createDirectory = async (path: string): Promise<void> => {

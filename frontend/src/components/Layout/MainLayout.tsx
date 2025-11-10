@@ -1,5 +1,5 @@
 // frontend/src/components/layout/MainLayout.tsx
-import React, { useState, useRef, useCallback, useEffect } from 'react';
+import React, { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import TitleBar from './TitleBar/Titlebar';
 import FileSystemProvider from '../../contexts/FileSystemContext';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -31,11 +31,14 @@ const EditorManager = dynamic(() => import('./EditorManager/EditorManager'), {
     ssr: false,
 });
 
+// Define sidebar view types
+type SidebarView = 'default' | 'semanticSearch' | 'compareNotes';
+
 const MainLayout: React.FC = () => {
     const [filesToCompare, setFilesToCompare] = useState<[FileItem, FileItem] | null>(null);
     const [activeOption, setActiveOption] = useState<IconSidebarOptions>('files');
     const [isSidebarCollapsed, setIsSidebarCollapsed] = useState<boolean>(false);
-    const [activeView, setActiveView] = useState<string>('default');
+    const [activeView, setActiveView] = useState<SidebarView>('default');
 
     const { currentOpenedFile, loadFileIntoEditor, saveFile, getFileItemFromPath } = useFileSystem();
     const { registerOpenFileHandler } = useEditor();
@@ -88,24 +91,30 @@ const MainLayout: React.FC = () => {
         }
     };
 
-    const viewMap = {
-        semanticSearch: (
-            <SemanticSidebar
-                onClose={() => setActiveView('default')}
-                handleOpenFile={handleOpenFile}
-            />
-        ),
-        compareNotes: (
-            <CompareNotesView
-                files={filesToCompare}
-                onClose={() => {
-                    setFilesToCompare(null)
-                    setActiveView('default')
-                }}
-            />
-        ),
-        default: (<></>)
-    }
+    // Memoized sidebar content to reduce re-renders
+    const sidebarContent = useMemo(() => {
+        switch (activeView) {
+            case 'semanticSearch':
+                return (
+                    <SemanticSidebar
+                        onClose={() => setActiveView('default')}
+                        handleOpenFile={handleOpenFile}
+                    />
+                );
+            case 'compareNotes':
+                return (
+                    <CompareNotesView
+                        files={filesToCompare}
+                        onClose={() => {
+                            setFilesToCompare(null)
+                            setActiveView('default')
+                        }}
+                    />
+                );
+            case 'default':
+                return null;
+        }
+    }, [activeView, filesToCompare, handleOpenFile]);
 
     useEffect(() => {
         registerOpenFileHandler(handleOpenFile)
@@ -177,7 +186,7 @@ const MainLayout: React.FC = () => {
                         defaultSize={35}
                         onCollapse={() => setActiveView('default')}
                     >
-                        {viewMap[activeView]}
+                        {sidebarContent}
                     </ResizablePanel>
                 </>
             )}

@@ -13,7 +13,9 @@ interface AIPrompt<T> {
  * @param model - The model to use
  * @param prompt - The prompt to use
  * @param data - The data to use
- * @returns 
+ * @param stream - Whether to stream the response
+ * @param onChunk - Callback function invoked for each chunk when streaming
+ * @returns {Promise<string | void>} A Promise that resolves to a string containing the model's response (for non-streaming), or void (for streaming).
  */
 export const runAITask = async<T>(
     model: LocalModel,
@@ -25,6 +27,9 @@ export const runAITask = async<T>(
     if (!model) throw new Error("Model not found")
 
     if (stream) {
+        if (!onChunk) {
+            throw new Error("onChunk callback must be provided when stream is true");
+        }
         const fullPrompt = prompt.prompt(data)
         console.log(`[runAITask] Running prompt: ${fullPrompt}`)
         await model.generateStream(fullPrompt, onChunk)
